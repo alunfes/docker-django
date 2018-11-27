@@ -1,0 +1,43 @@
+version: '3'
+
+services:
+  db:
+    restart: always
+    image: postgres
+    container_name: django.db
+    ports:
+      - "5432:5432"
+    command: --init-file /db/1_init.sql
+    environment:
+      - "DATABASE_HOST: db"
+      - "DATABASE_USER: postgres"
+      - "DATABASE_PASSWORD: password"
+    user: root
+    volumes:
+      - "./db:/var/lib/postgresql/data"
+
+  web:
+    build: ./web
+    container_name: mysite.web
+    #command: uwsgi --socket :8001 --module mysite.wsgi
+    command: uwsgi --ini /src/example/django.ini
+    volumes:
+      - ./src:/code
+      - ./static:/static
+    expose:
+      - "8001"
+    depends_on:
+      - db
+
+  nginx:
+    image: nginx
+    container_name: django.nginx
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./nginx/conf:/etc/nginx/conf.d
+      - ./uwsgi/uwsgi_params:/etc/nginx/uwsgi_params
+      - ./static:/static
+      - ./nginx/log:/var/log/nginx
+    depends_on:
+      - web
